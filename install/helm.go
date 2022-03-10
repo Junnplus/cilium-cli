@@ -135,6 +135,24 @@ func (k *K8sInstaller) generateManifests(ctx context.Context) error {
 			}
 		}
 
+		imageSHA := k.getImagesSHA()
+		if imageSHA != "" {
+			// If the user has specified a version with `--version` then
+			// set all image tags with that version. The user will have the
+			// option to overwrite any of these options with the specific
+			// helm option.
+			helmMapOpts["image.tag"] = imageSHA
+			helmMapOpts["image.useDigest"] = "false"
+			helmMapOpts["operator.image.tag"] = imageSHA
+			helmMapOpts["operator.image.digest"] = "false"
+			helmMapOpts["hubble.relay.image.tag"] = imageSHA
+			helmMapOpts["hubble.relay.image.useDigest"] = "false"
+			helmMapOpts["preflight.image.tag"] = imageSHA
+			helmMapOpts["preflight.image.useDigest"] = "false"
+			helmMapOpts["clustermesh.apiserver.image.tag"] = imageSHA
+			helmMapOpts["clustermesh.apiserver.image.useDigest"] = "false"
+		}
+
 		helmMapOpts["serviceAccounts.cilium.name"] = defaults.AgentServiceAccountName
 		helmMapOpts["serviceAccounts.operator.name"] = defaults.OperatorServiceAccountName
 
