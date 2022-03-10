@@ -48,6 +48,7 @@ cilium install --context kind-cluster1 --cluster-id 1 --cluster-name cluster1
 	}
 
 	cmd.Flags().StringVarP(&params.Namespace, "namespace", "n", "kube-system", "Namespace to install Cilium into")
+	// Deprecated
 	cmd.Flags().StringVar(&params.ClusterName, "cluster-name", "", "Name of the cluster")
 	cmd.Flags().StringSliceVar(&params.DisableChecks, "disable-check", []string{}, "Disable a particular validation check")
 	cmd.Flags().StringVar(&params.Version, "version", defaults.Version, "Cilium version to install")
@@ -55,32 +56,45 @@ cilium install --context kind-cluster1 --cluster-id 1 --cluster-name cluster1
 		"Specify the base Cilium version for configuration purpose in case the --version flag doesn't indicate the actual Cilium version")
 	cmd.Flags().MarkHidden("base-version")
 	cmd.Flags().StringVar(&params.DatapathMode, "datapath-mode", "", "Datapath mode to use")
+	// Deprecated
 	cmd.Flags().StringVar(&params.IPAM, "ipam", "", "IP Address Management (IPAM) mode")
+	// Deprecated
 	cmd.Flags().StringVar(&params.IPv4NativeRoutingCIDR, "ipv4-native-routing-cidr", "", "IPv4 CIDR within which native routing is possible")
+	// Deprecated
 	cmd.Flags().IntVar(&params.ClusterID, "cluster-id", 0, "Unique cluster identifier for multi-cluster")
 	cmd.Flags().StringVar(&contextName, "context", "", "Kubernetes configuration context")
 	cmd.Flags().StringVar(&params.InheritCA, "inherit-ca", "", "Inherit/import CA from another cluster")
+	// Deprecated
 	cmd.Flags().StringVar(&params.KubeProxyReplacement, "kube-proxy-replacement", "disabled", "Enable/disable kube-proxy replacement { disabled | probe | strict }")
 	cmd.Flags().BoolVar(&params.Wait, "wait", true, "Wait for status to report success (no errors)")
 	cmd.Flags().DurationVar(&params.WaitDuration, "wait-duration", defaults.StatusWaitDuration, "Maximum time to wait for status")
 	cmd.Flags().BoolVar(&params.RestartUnmanagedPods, "restart-unmanaged-pods", true, "Restart pods which are not being managed by Cilium")
 	cmd.Flags().StringVar(&params.Encryption, "encryption", "disabled", "Enable encryption of all workloads traffic { disabled | ipsec | wireguard }")
+	// Deprecated
 	cmd.Flags().BoolVar(&params.NodeEncryption, "node-encryption", false, "Enable encryption of all node to node traffic")
+	// Deprecated
 	cmd.Flags().StringSliceVar(&params.ConfigOverwrites, "config", []string{}, "Set ConfigMap entries { key=value[,key=value,..] }")
+	// Deprecated
 	cmd.Flags().StringVar(&params.AgentImage, "agent-image", "", "Image path to use for Cilium agent")
+	// Deprecated
 	cmd.Flags().StringVar(&params.OperatorImage, "operator-image", "", "Image path to use for Cilium operator")
 	cmd.Flags().DurationVar(&params.CiliumReadyTimeout, "cilium-ready-timeout", 5*time.Minute,
 		"Timeout for Cilium to become ready before restarting unmanaged pods")
 	cmd.Flags().BoolVar(&params.Rollback, "rollback", true, "Roll back installed resources on failure")
 
+	// Deprecated
 	cmd.Flags().StringVar(&params.Azure.ResourceGroupName, "azure-resource-group", "", "Azure resource group name the cluster is in (required)")
 	cmd.Flags().StringVar(&params.Azure.AKSNodeResourceGroup, "azure-node-resource-group", "", "Azure node resource group name the cluster is in. Bypasses `--azure-resource-group` if provided.")
 	cmd.Flags().MarkHidden("azure-node-resource-group") // intended for for development purposes, notably CI usage, cf. azure.go
 	cmd.Flags().StringVar(&params.Azure.SubscriptionName, "azure-subscription", "", "Azure subscription name the cluster is in (default `az account show`)")
+	// Deprecated
 	cmd.Flags().StringVar(&params.Azure.SubscriptionID, "azure-subscription-id", "", "Azure subscription ID. Bypasses auto-detection and `--azure-subscription` if provided.")
 	cmd.Flags().MarkHidden("azure-subscription-id") // intended for for development purposes, notably CI usage, cf. azure.go
+	// Deprecated
 	cmd.Flags().StringVar(&params.Azure.TenantID, "azure-tenant-id", "", "Tenant ID of Azure Service Principal to use for installing Cilium (will create one if none provided)")
+	// Deprecated
 	cmd.Flags().StringVar(&params.Azure.ClientID, "azure-client-id", "", "Client (application) ID of Azure Service Principal to use for installing Cilium (will create one if none provided)")
+	// Deprecated
 	cmd.Flags().StringVar(&params.Azure.ClientSecret, "azure-client-secret", "", "Client secret of Azure Service Principal to use for installing Cilium (will create one if none provided)")
 	cmd.Flags().StringVar(&params.K8sVersion, "k8s-version", "", "Kubernetes server version in case auto-detection fails")
 
@@ -90,6 +104,20 @@ cilium install --context kind-cluster1 --cluster-id 1 --cluster-name cluster1
 	cmd.Flags().StringArrayVar(&params.HelmOpts.StringValues, "helm-set-string", []string{}, "Set helm STRING values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
 	cmd.Flags().StringArrayVar(&params.HelmOpts.FileValues, "helm-set-file", []string{}, "Set helm values from respective files specified via the command line (can specify multiple or separate values with commas: key1=path1,key2=path2)")
 	cmd.Flags().StringVar(&params.HelmGenValuesFile, "helm-auto-gen-values", "", "Write an auto-generated helm values into this file")
+
+	for flagName, helmOpt := range install.DeprecatedFlagsToHelmOpts {
+		msg := fmt.Sprintf("use --helm-set=%s<=value> instead", helmOpt)
+		err := cmd.Flags().MarkDeprecated(flagName, msg)
+		if err != nil {
+			panic(err)
+		}
+		install.DeprecatedFlagsValues[flagName] = cmd.Flags().Lookup(flagName).Value
+	}
+	err := cmd.Flags().MarkDeprecated("config", "use --helm-set=extraConfig.<key>=<value>[,extraConfig.<key>=<value>] instead")
+	if err != nil {
+		panic(err)
+	}
+	install.DeprecatedFlagsValues["config"] = cmd.Flags().Lookup("config").Value
 
 	return cmd
 }
